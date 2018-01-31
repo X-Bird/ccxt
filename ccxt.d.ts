@@ -286,7 +286,7 @@ declare module 'ccxt' {
         fetchOHLCV? (symbol: string, params?: {}): Promise<OHLCV[]>;
         fetchOrders (symbol?: string, params?: {}): Promise<Order[]>;
         fetchOpenOrders (symbol?: string, params?: {}): Promise<Order[]>;
-        cancelOrder (id: string): Promise<any>;
+        cancelOrder (id: string, symbol: string): Promise<any>;
         deposit (currency: string, amount: string, address: string, params?: any): Promise<any>;
         withdraw (currency: string, amount: string, address: string, params?: any): Promise<any>;
         request (path: string, api?: string, method?: string, params?: any, headers?: any, body?: any): Promise<any>;

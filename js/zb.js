@@ -310,23 +310,26 @@ module.exports = class zb extends Exchange {
 
     async createOrder (symbol, type, side, amount, price = undefined, params = {}) {
         await this.loadMarkets ();
-        let paramString = '&price=' + price.toString ();
-        paramString += '&amount=' + amount.toString ();
         let tradeType = (side === 'buy') ? '1' : '0';
-        paramString += '&tradeType=' + tradeType;
-        paramString += '&currency=' + this.marketId (symbol);
-        let response = await this.privatePostOrder (paramString);
+        params = {
+            price: price.toString(),
+            amount: amount.toString(),
+            tradeType: tradeType,
+            currency: this.marketId (symbol)
+        }
+        let response = await this.privatePostOrder (params);
         return {
             'info': response,
             'id': response['id'],
         };
     }
 
-    async cancelOrder (id, symbol = undefined, params = {}) {
+    async cancelOrder (id, symbol, params = {}) {
         await this.loadMarkets ();
-        let paramString = '&id=' + id.toString ();
-        if ('currency' in params)
-            paramString += '&currency=' + params['currency'];
+        let paramString = {
+            id: id.toString(),
+            currency: this.marketId(symbol)
+        }
         return await this.privatePostCancelOrder (paramString);
     }
 
@@ -342,6 +345,15 @@ module.exports = class zb extends Exchange {
         return this.milliseconds ();
     }
 
+    orderParams(params) {
+        return Object.keys(params)
+        .sort()
+        .map((key) => {
+            return `${key}=${params[key]}`;
+        })
+        .join('&');
+    }
+
     sign (path, api = 'public', method = 'GET', params = {}, headers = undefined, body = undefined) {
         let url = this.urls['api'][api];
         if (api === 'public') {
@@ -351,8 +363,9 @@ module.exports = class zb extends Exchange {
         } else {
             this.checkRequiredCredentials ();
             let nonce = this.nonce ();
-            let auth = 'accesskey=' + this.apiKey;
-            auth += '&' + 'method=' + path;
+            params.accesskey = this.apiKey;
+            params.method = path;
+            let auth = this.orderParams(params);
             let secret = this.hash (this.encode (this.secret), 'sha1');
             let signature = this.hmac (this.encode (auth), this.encode (secret), 'md5');
             let suffix = 'sign=' + signature + '&reqTime=' + nonce.toString ();
@@ -386,7 +399,7 @@ module.exports = class zb extends Exchange {
     async request (path, api = 'public', method = 'GET', params = {}, headers = undefined, body = undefined) {
         let response = await this.fetch2 (path, api, method, params, headers, body);
         if (api === 'private')
-            if ('code' in response)
+            if ('code' in response && response['code'] != 1000)
                 throw new ExchangeError (this.id + ' ' + this.json (response));
         return response;
     }
